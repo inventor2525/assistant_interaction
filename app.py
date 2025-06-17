@@ -115,7 +115,7 @@ def save_file(path, content):
         if error:
             return f"Saved file: {path}\n{error}"
         # Generate hunk choices
-        modified_diff, hunks = add_change_numbers(diff, Path(path))
+        modified_diff, hunks = add_change_numbers(diff, Path(path), add_line_numbers=True)
         choices = [f"{hunk['number']}, (Yes/No)" for hunk in hunks]
         choices_output = f"### AI_CHOICES_START: {path} ###\n" + "\n".join(choices) + "\n### AI_CHOICES_END ###" if hunks else ""
         return f"Saved file: {path}\n{modified_diff}\n{choices_output}"
