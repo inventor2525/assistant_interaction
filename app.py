@@ -151,6 +151,21 @@ def read_file(path, add_line_numbers: bool = True):
     except Exception as e:
         return str(e)
 
+# Function to read specific lines from a file
+def read_lines(file_path: str, start: int, end: int, prefix: str = "") -> list[str]:
+    try:
+        with open(file_path, 'r') as f:
+            lines = f.readlines()
+        # Adjust for 1-based indexing and slice
+        selected_lines = lines[start-1:end]
+        # Apply prefix (e.g., indent) or remove prefix if negative
+        if prefix.startswith("-"):
+            remove_str = prefix[1:]
+            return [line.replace(remove_str, "", 1) if line.startswith(remove_str) else line for line in selected_lines]
+        return [prefix + line for line in selected_lines]
+    except Exception as e:
+        return [f"Error reading lines {start}-{end} from {file_path}: {e}"]
+
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == 'POST':
@@ -168,6 +183,8 @@ def index():
             bash_commands = []
             save_content = []
             choices_content = []
+
+            read_lines_pattern = re.compile(r'^### AI_READ_LINES: (.+?):(\d+):(\d+)(?::(.+?))? ###$')
 
             for line in lines:
                 if line.strip() == "### AI_BASH_START ###":
@@ -205,7 +222,15 @@ def index():
                     else:
                         output_lines.append("Error: Save end without start")
                 elif in_save:
-                    save_content.append(line)
+                    read_lines_match = read_lines_pattern.match(line)
+                    if read_lines_match:
+                        file_path = read_lines_match.group(1)
+                        start = int(read_lines_match.group(2))
+                        end = int(read_lines_match.group(3))
+                        prefix = read_lines_match.group(4) or ""
+                        save_content.extend(read_lines(file_path, start, end, prefix))
+                    else:
+                        save_content.append(line)
                 elif line.startswith("### AI_APPLY_CHOICES: "):
                     if in_apply_choices:
                         output_lines.append("Error: Nested apply choices start")
