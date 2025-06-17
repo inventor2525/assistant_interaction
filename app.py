@@ -25,7 +25,7 @@ import subprocess
 import os
 import re
 from pathlib import Path
-from assistant_merger.git_tools import get_git_diff, add_change_numbers
+from assistant_merger.git_tools import get_git_diff, add_change_numbers, apply_changes
 
 app = Flask(__name__)
 
@@ -96,9 +96,11 @@ def index():
             lines = input_text.splitlines()
             in_bash = False
             in_save = False
+            in_apply_choices = False
             current_path = None
             bash_commands = []
             save_content = []
+            choices_content = []
 
             for line in lines:
                 if line.strip() == "### AI_BASH_START ###":
@@ -137,6 +139,32 @@ def index():
                         output_lines.append("Error: Save end without start")
                 elif in_save:
                     save_content.append(line)
+                elif line.startswith("### AI_APPLY_CHOICES: "):
+                    if in_apply_choices:
+                        output_lines.append("Error: Nested apply choices start")
+                    else:
+                        in_apply_choices = True
+                        parts = line.split(":", 1)
+                        if len(parts) == 2:
+                            current_path = parts[1].strip().rstrip(" ###")
+                            choices_content = []
+                        else:
+                            output_lines.append("Error: Invalid apply choices format")
+                elif line.strip() == "### AI_APPLY_CHOICES_END ###":
+                    if in_apply_choices:
+                        in_apply_choices = False
+                        diff, error = get_git_diff(Path(current_path))
+                        if error:
+                            output_lines.append(f"Error: {error}")
+                        else:
+                            llm_response = "\n".join(choices_content)
+                            merged_content = apply_changes(Path(current_path), diff, llm_response)
+                            output_lines.append(save_file(current_path, merged_content))
+                        current_path = None
+                    else:
+                        output_lines.append("Error: Apply choices end without start")
+                elif in_apply_choices:
+                    choices_content.append(line)
                 elif line.startswith("### AI_READ_DIR: "):
                     parts = line.split("regex:", 1)
                     if len(parts) == 2:
@@ -158,6 +186,8 @@ def index():
                 output_lines.append("Error: Unclosed bash block")
             if in_save:
                 output_lines.append("Error: Unclosed save block")
+            if in_apply_choices:
+                output_lines.append("Error: Unclosed apply choices block")
         else:
             # Human input: append to output
             output_lines.append(input_text)
