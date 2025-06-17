@@ -24,6 +24,8 @@ from flask import Flask, request, render_template, redirect, url_for, Response
 import subprocess
 import os
 import re
+from pathlib import Path
+from assistant_merger.git_tools import get_git_diff, add_change_numbers
 
 app = Flask(__name__)
 
@@ -38,53 +40,6 @@ def run_bash_commands(commands):
     except Exception as e:
         return str(e)
 
-# Function to find the Git repository root for a given file path
-def find_git_repo_root(file_path):
-    current_dir = os.path.abspath(os.path.dirname(file_path))
-    while current_dir != "/":
-        if os.path.isdir(os.path.join(current_dir, ".git")):
-            return current_dir
-        current_dir = os.path.dirname(current_dir)
-    return None
-
-# Function to get git diff for a file
-def get_git_diff(path):
-    try:
-        # Find the Git repository root for the file
-        repo_root = find_git_repo_root(path)
-        if not repo_root:
-            return f"Error: No git repository found for {path}"
-
-        # Normalize the file path relative to the repository root
-        abs_path = os.path.abspath(path)
-        rel_path = os.path.relpath(abs_path, repo_root)
-
-        # Check if file is tracked by git
-        result = subprocess.run(
-            f"git ls-files --error-unmatch {rel_path}",
-            shell=True,
-            cwd=repo_root,
-            capture_output=True,
-            text=True
-        )
-        if result.returncode == 0:
-            # File is tracked, get diff
-            diff_result = subprocess.run(
-                f"git diff {rel_path}",
-                shell=True,
-                cwd=repo_root,
-                capture_output=True,
-                text=True
-            )
-            diff = diff_result.stdout
-            if not diff:
-                return f"No changes in git diff for {rel_path} (file unchanged since last commit)"
-            return f"--- Git Diff for {rel_path} ---\n{diff}\n--- End Git Diff ---"
-        else:
-            return f"File {rel_path} is untracked or not in git repository"
-    except Exception as e:
-        return f"Error getting git diff for {path}: {str(e)}"
-
 # Function to save a file
 def save_file(path, content):
     try:
@@ -92,9 +47,15 @@ def save_file(path, content):
         os.makedirs(os.path.dirname(path), exist_ok=True)
         with open(path, 'w') as f:
             f.write(content)
-        # Get git diff after saving
-        diff = get_git_diff(path)
-        return f"Saved file: {path}\n{diff}"
+        # Get git diff using git_tools
+        diff, error = get_git_diff(Path(path))
+        if error:
+            return f"Saved file: {path}\n{error}"
+        # Generate hunk choices
+        modified_diff, hunks = add_change_numbers(diff, Path(path))
+        choices = [f"{hunk['number']}, (Yes/No)" for hunk in hunks]
+        choices_output = f"### AI_CHOICES_START: {path} ###\n" + "\n".join(choices) + "\n### AI_CHOICES_END ###" if hunks else ""
+        return f"Saved file: {path}\n{modified_diff}\n{choices_output}"
     except Exception as e:
         return str(e)
 
