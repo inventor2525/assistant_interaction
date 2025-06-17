@@ -3,6 +3,8 @@
 # Example response format:
 # ```txt
 # <AI_RESPONSE>
+#...
+# <END_OF_INPUT>
 # ```
 #
 # The web UI may corrupt responses by removing ``` or ```language markers, so replace them in bash scripts or save operations as needed (e.g., use \`\`\` for ```).
@@ -19,6 +21,67 @@
 # 3. If the diff includes unintended changes, revise the file content to match only the necessary modifications, preserving the original structure, comments, and formatting.
 # 4. If the file is untracked (no prior commits), treat it as a new file and ensure it aligns with the task requirements without extraneous additions.
 # These steps ensure minimal and intentional changes to the codebase.
+#
+# Eg:
+#
+# ```txt
+# <AI_RESPONSE>
+# ### AI_SAVE_START: /data/data/com.termux/files/home/temp_projects/example_unit_alg_diff/vector2.py ###
+# class Vector2:
+#     """A 2D vector class for game development."""
+#     def __init__(self, x: float, y: float):
+#         self.x = x
+#         self.y = y
+# ### AI_SAVE_END ###
+# ### AI_BASH_START ###
+# # Create the temp_projects directory in the home directory
+# mkdir -p /data/data/com.termux/files/home/temp_projects
+# cd /data/data/com.termux/files/home/temp_projects
+
+# # Clone the specified repositories
+# git clone https://github.com/inventor2525/Alejandro.git
+# git clone https://github.com/inventor2525/PrivateWebSpeech.git
+# git clone https://github.com/inventor2525/RequiredAI.git
+# git clone https://github.com/inventor2525/assistant_merger.git
+# git clone https://github.com/inventor2525/assistant_interaction.git
+# git clone https://github.com/inventor2525/graph_editor.git
+# tree
+# ### AI_BASH_END ###
+# ### AI_READ_FILE: /data/data/com.termux/files/home/temp_projects/assistant_merger/assistant_merger/git_tools.py ###
+# ### AI_READ_FILE: /data/data/com.termux/files/home/temp_projects/assistant_interaction/app.py ###
+# <END_OF_INPUT>
+# ```
+# 
+# Helpful tip, you may want to tree the projects dir when starting a new conversation, assume those repo's are there less
+# stated otherwise.
+#
+# Also, if not run from a phone, the user may say they're in /home/charlie/Projects/Alejandro_dev if on the laptop or /workspace/ if on vast.ai (Assume we're on the phone though less you're told that, don't go checking for them there.)
+#
+# When saving you can then accept or deny your own changes.
+# You should avoid making ANY un-nessisary or un-requested changes,
+# but doing this by verbatim copying code is hard for LLMs so, this
+# lets you undo un-nessisary changes that you made accidentally that
+# would make a merge request harder. There is no need to simply say yes
+# to all changes. You only need to respond if one of them, you wish to
+# say no to.
+#
+# Eg:
+# ```txt
+# <AI_RESPONSE>
+# ### AI_APPLY_CHOICES: /data/data/com.termux/files/home/temp_projects/example_unit_alg_diff/vector2.py ###
+# Change #1, No
+# Change #2, Yes
+# ### AI_APPLY_CHOICES_END ###
+# <END_OF_INPUT>
+# ```
+#
+# You should get a diff for any changes you make to a file that exists
+# in a git repo, but it may not be in one, in which case you can ignore
+# this step.
+#
+# Do not presume what a diff is expected to be, and do not guess
+# which changes you will accept or reject before receiving a diff
+# from the application after you save a file.
 
 from flask import Flask, request, render_template, redirect, url_for, Response
 import subprocess
