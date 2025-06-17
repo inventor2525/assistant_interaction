@@ -139,10 +139,14 @@ def read_directory(directory, regex):
         return str(e)
 
 # Function to read a single file
-def read_file(path):
+def read_file(path, add_line_numbers: bool = True):
     try:
         with open(path, 'r') as f:
             content = f.read()
+        if add_line_numbers:
+            lines = content.splitlines()
+            numbered_lines = [f"{i+1:4d} {line}" for i, line in enumerate(lines)]
+            content = "\n".join(numbered_lines)
         return f"--- File: {path} ---\n{content}\n--- End of file ---"
     except Exception as e:
         return str(e)
