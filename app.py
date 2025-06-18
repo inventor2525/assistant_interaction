@@ -155,14 +155,20 @@ def read_file(path, add_line_numbers: bool = True):
 def read_lines(file_path: str, start: int, end: int, prefix: str = "") -> list[str]:
     try:
         with open(file_path, 'r') as f:
-            lines = f.readlines()
+            file = f.read()
+        lines = file.split("\n")
         # Adjust for 1-based indexing and slice
         selected_lines = lines[start-1:end]
         # Apply prefix (e.g., indent) or remove prefix if negative
         if prefix.startswith("-"):
             remove_str = prefix[1:]
-            return [line.replace(remove_str, "", 1) if line.startswith(remove_str) else line for line in selected_lines]
-        return [prefix + line for line in selected_lines]
+            remove_str_len = len(remove_str)
+            selected_lines = [line[remove_str_len:] if line.startswith(remove_str) else line for line in selected_lines]
+        elif prefix.startswith("+"):
+            add_str = prefix[1:]
+            selected_lines = [add_str+line for line in selected_lines]
+        print(selected_lines)
+        return selected_lines
     except Exception as e:
         return [f"Error reading lines {start}-{end} from {file_path}: {e}"]
 
@@ -184,7 +190,7 @@ def index():
             save_content = []
             choices_content = []
 
-            read_lines_pattern = re.compile(r'^### AI_READ_LINES: (.+?):(\d+):(\d+)(?::(.+?))? ###$')
+            read_lines_pattern = re.compile(r'^\s*### AI_READ_LINES: (.+?):(\d+):(\d+)(?::"(.+?)")? ###$')
 
             for line in lines:
                 if line.strip() == "### AI_BASH_START ###":
