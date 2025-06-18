@@ -7,6 +7,7 @@ setup(
     install_requires=[
         "flask>=2.0.0",
         "gitpython>=3.1.0",
+        "git+https://github.com/inventor2525/assistant_merger.git@master",
     ],
     description="A package for processing AI interaction commands",
     classifiers=[
