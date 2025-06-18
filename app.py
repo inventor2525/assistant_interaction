@@ -82,6 +82,41 @@
 # Do not presume what a diff is expected to be, and do not guess
 # which changes you will accept or reject before receiving a diff
 # from the application after you save a file.
+#
+# Note that you can also read a block of code from 1 file straight into another by having 
+# AI_READ_LINES in-between AI_SAVE_START and AI_SAVE_END. With it you can remove indentation or add it
+# to match that of the file you are reading into.
+# Eg:
+#
+# ```txt
+# <AI_RESPONSE>
+# ### AI_SAVE_START: /home/charlie/Projects/Alejandro_dev/assistant_interaction/assistant_interaction/core/utils.py ###
+# import os
+# import re
+# import subprocess
+# from pathlib import Path
+# from typing import List, Optional
+#
+# from assistant_merger.git_tools import get_git_diff, add_change_numbers, apply_changes
+#
+# ### AI_READ_LINES: /home/charlie/Projects/Alejandro_dev/assistant_interaction/app.py:98:167 ###
+#
+# def process_command(input_text: str) -> str:
+#     ### AI_READ_LINES: /home/charlie/Projects/Alejandro_dev/assistant_interaction/app.py:175:282:"-    " ###
+#     return "\n".join(output_lines)
+# ### AI_SAVE_END ###
+# ### AI_READ_FILE: /home/charlie/Projects/Alejandro_dev/assistant_interaction/assistant_interaction/core/utils.py ###
+# <END_OF_INPUT>
+# ```
+#
+# Notice that it does not matter if AI_READ_LINES is indented, but that you can explicitly add indentation to read lines
+# with "+        " or remove it with "- ". Notice you can remove or add any type of indent you need to in that way. Anything
+# after the +/- will be added/removed from the beginning of each line that is read.
+#
+# Always be sure to pull your line numbers from the file you are trying to read lines from. Do not guess what they are!
+#
+# Calling AI_READ_FILE will give you the files contents, with line numbers. Do that, in a separate message, at least once,
+# before you try to AI_READ_LINES from that file.
 
 from flask import Flask, request, render_template, redirect, url_for, Response
 import subprocess
@@ -155,14 +190,20 @@ def read_file(path, add_line_numbers: bool = True):
 def read_lines(file_path: str, start: int, end: int, prefix: str = "") -> list[str]:
     try:
         with open(file_path, 'r') as f:
-            lines = f.readlines()
+            file = f.read()
+        lines = file.split("\n")
         # Adjust for 1-based indexing and slice
         selected_lines = lines[start-1:end]
         # Apply prefix (e.g., indent) or remove prefix if negative
         if prefix.startswith("-"):
             remove_str = prefix[1:]
-            return [line.replace(remove_str, "", 1) if line.startswith(remove_str) else line for line in selected_lines]
-        return [prefix + line for line in selected_lines]
+            remove_str_len = len(remove_str)
+            selected_lines = [line[remove_str_len:] if line.startswith(remove_str) else line for line in selected_lines]
+        elif prefix.startswith("+"):
+            add_str = prefix[1:]
+            selected_lines = [add_str+line for line in selected_lines]
+        print(selected_lines)
+        return selected_lines
     except Exception as e:
         return [f"Error reading lines {start}-{end} from {file_path}: {e}"]
 
@@ -184,7 +225,7 @@ def index():
             save_content = []
             choices_content = []
 
-            read_lines_pattern = re.compile(r'^### AI_READ_LINES: (.+?):(\d+):(\d+)(?::(.+?))? ###$')
+            read_lines_pattern = re.compile(r'^\s*### AI_READ_LINES: (.+?):(\d+):(\d+)(?::"(.+?)")? ###$')
 
             for line in lines:
                 if line.strip() == "### AI_BASH_START ###":
