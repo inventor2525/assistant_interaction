@@ -26,7 +26,7 @@ def save_file(path, content):
         # Get git diff using git_tools
         diff, error = get_git_diff(Path(path))
         if error:
-            return f"Saved file: {path}\n{error}"
+            return f"Saved file: {path}\n{error}\n{read_file(path)}"
         # Generate hunk choices
         modified_diff, hunks = add_change_numbers(diff, Path(path), add_line_numbers=True)
         choices = [f"{hunk['number']}, (Yes/No)" for hunk in hunks]
