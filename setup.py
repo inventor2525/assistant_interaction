@@ -17,7 +17,7 @@ setup(
     ],
     python_requires=">=3.10.12",
     install_requires=[
-        "assistant_merger @ git+https://github.com/inventor2525/assistant_merger.git@main",
+        "assistant_merger @ git+https://github.com/inventor2525/assistant_merger.git@master",
     ],
     extras_require={
         "dev": ["unittest"],
