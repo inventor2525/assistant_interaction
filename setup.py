@@ -1,4 +1,18 @@
 from setuptools import setup, find_packages
+from importlib import import_module
+
+def my_dependency(dep_name:str) -> str:
+	'''
+	Creates a install_requires link to one of my other
+	dependencies that respects any existing install of a
+	dependency with pip install -e
+	'''
+	try:
+		import_module(dep_name)
+		return dep_name
+	except:
+		return f"{dep_name} @ git+https://github.com/Inventor2525/{dep_name}@master"
+
 
 setup(
 	name="assistant_interaction",
@@ -17,7 +31,7 @@ setup(
 	],
 	python_requires=">=3.10.12",
 	install_requires=[
-		"assistant_merger @ git+https://github.com/inventor2525/assistant_merger.git@master",
+		my_dependency("assistant_merger"),
 	],
 	extras_require={
 		"dev": ["unittest"],
